@@ -1,2 +1,3 @@
-backups.db
-src\controllers\__pycache__
+/test_media
+./backups.db
+/src/controllers/__pycache__

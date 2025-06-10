@@ -3,54 +3,66 @@ import sqlite3 as sqlite
 def createDevice(name, user, password):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
+    
     query = "INSERT INTO device(`name`, `user`, pass) VALUES (?, ?, ?)"
     cursor.execute(query, [name, user, password]) # Los arrays deberían de reemplazarse por tuplas (x,x,x)
+    
     connection.commit()
     connection.close()
 
 def getDevicebyName(name):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
+    
     query = "SELECT * FROM device WHERE name = ?"
     cursor.execute(query, [name]) # (x,)
-    device = cursor.fetchall()
+    result = cursor.fetchall()
+    
     connection.commit()
     connection.close()
-    print(device)
+    return result
     
 def getDevicebyId(device_id):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
+    
     query = "SELECT * FROM device WHERE id = ?"
     cursor.execute(query, [device_id])
-    device = cursor.fetchall()
+    result = cursor.fetchall()
+    
     connection.commit()
     connection.close()
-    print(device)
+    return result
     
 def getAllDevices():
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
+    
     query = "SELECT * FROM device"
     cursor.execute(query)
-    devices = cursor.fetchall()
+    result = cursor.fetchall()
+    
     connection.commit()
     connection.close()
-    print(devices)
+    return result
     
 def updateDevice(device_id, column, new_value):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
+    
     query = f"UPDATE device SET {column} = ? WHERE id = ?"
     cursor.execute(query, [new_value, device_id])
+    
     connection.commit()
     connection.close()
 
 def deleteDevice(device_id):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
+    
     query = "DELETE FROM device WHERE id = ?"
     cursor.execute(query,[device_id])
+    
     connection.commit()
     connection.close()
     
@@ -75,14 +87,14 @@ def deleteDevice(device_id):
 
 
 if __name__ == "__main__":
-    # createDevice("rouA", "admin", "admin")
-    # createDevice("rouB", "user", "pass")
+    createDevice("rouA", "admin", "admin")
+    createDevice("rouB", "user", "pass")
     createDevice("rouC", "test", "12345")
     
-    getAllDevices()
+    print(getAllDevices())
     
     deleteDevice(3)
     
-    getDevicebyName("rouC")
+    print(getDevicebyName("rouC"))
     
-    getDevicebyId(2)
+    print(getDevicebyId(2))
