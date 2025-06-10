@@ -52,8 +52,11 @@ if __name__ == "__main__":
     
     # storeBackup("hoymismo", 2, "holasoyunbackup")
     
-    print(getBackupByDevice(2, "hoymismo"))
+    # storeBackup("15-05-2025", 1, "soy un backup xd")
     
+    print(getBackupByDevice(1, "15-05-2025"))
+    
+
     # foto = getAllBackupByDevice(2)[0][2]
     # with open("test_media/recuperado.webp", 'wb') as recuperado:
     #     recuperado.write(foto)

@@ -15,9 +15,11 @@ def createTableDevice():
         """
         CREATE TABLE device(
             id integer primary key,
-            `name` text,
+            `name` text not null,
             `user` text,
-            pass text
+            pass text,
+            frequency text,
+            scheduled_date text
         )
         """)
     connection.commit()
@@ -31,7 +33,7 @@ def createTableBackup():
         CREATE TABLE backup(
             id integer primary key,
             `date` text,
-            backup_file blob,
+            backup_file blob not null,
             device_id integer,
             foreign key(device_id) references device(id)
         )

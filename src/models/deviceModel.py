@@ -1,11 +1,11 @@
 import sqlite3 as sqlite
 
-def createDevice(name, user, password):
+def createDevice(name, user, password, freq, time):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
     
-    query = "INSERT INTO device(`name`, `user`, pass) VALUES (?, ?, ?)"
-    cursor.execute(query, [name, user, password]) # Los arrays deberían de reemplazarse por tuplas (x,x,x)
+    query = "INSERT INTO device(`name`, `user`, pass, frequency, scheduled_date) VALUES (?, ?, ?, ?, ?)"
+    cursor.execute(query, [name, user, password, freq, time]) # Los arrays deberían de reemplazarse por tuplas (x,x,x)
     
     connection.commit()
     connection.close()
@@ -87,13 +87,11 @@ def deleteDevice(device_id):
 
 
 if __name__ == "__main__":
-    createDevice("rouA", "admin", "admin")
-    createDevice("rouB", "user", "pass")
-    createDevice("rouC", "test", "12345")
+    createDevice("rouA", "admin", "admin", "1d", "20:30")
+    createDevice("rouB", "user", "pass", "2y", "12:00")
+    createDevice("rouC", "test", "12345", "", "")
     
     print(getAllDevices())
-    
-    deleteDevice(3)
     
     print(getDevicebyName("rouC"))
     
