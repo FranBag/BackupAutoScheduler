@@ -24,18 +24,35 @@ def getAllBackupByDevice(device_id):
     return result
     
 def getBackupByDevice(device_id, date):
-    pass
+    connection = sqlite.connect("backups.db")
+    cursor = connection.cursor()
+    
+    query = "SELECT * FROM backup WHERE device_id = ? AND date = ?"
+    cursor.execute(query, [device_id, date])
+    result = cursor.fetchall()
+    
+    connection.commit()
+    connection.close()
+
+    return result
 
 def deleteBackupById(backup_id):
-    pass
+    connection = sqlite.connect("backups.db")
+    cursor = connection.cursor()
+    
+    query = "DELETE FROM backup WHERE id = ?"
+    cursor.execute(query, [backup_id])
+    
+    connection.commit()
+    connection.close()
 
 if __name__ == "__main__":
-    pass
     # with open("test_media/Mina.webp", "rb") as backup_file:
     #     backup_file_binary = backup_file.read()
     
-    # storeBackup("hoymismo", 2, backup_file_binary)
+    # storeBackup("hoymismo", 2, "holasoyunbackup")
     
+    print(getBackupByDevice(2, "hoymismo"))
     
     # foto = getAllBackupByDevice(2)[0][2]
     # with open("test_media/recuperado.webp", 'wb') as recuperado:
