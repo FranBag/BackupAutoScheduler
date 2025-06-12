@@ -66,8 +66,7 @@ def deleteDevice(device_id):
     connection.commit()
     connection.close()
     
-# def getAllDevices():
-#     connection = None
+
 #     try:
 #         connection = sqlite3.connect("backups.db")
 #         cursor = connection.cursor()
@@ -86,16 +85,12 @@ def deleteDevice(device_id):
 #             connection.close()
 
 
+def iniciardevice():
+    createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "daily", "20:30")
+    createDevice("rouB", "10.10.50.20", "22", "user", "pass", "yearly", "12:00")
+    createDevice("rouC", "255.255.255.255", "8888", "weekly", "12345", "", "")
+
 if __name__ == "__main__":
-    # for i in range(3):
-    #     deleteDevice(i+1)
+
     
-    createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "1d", "20:30")
-    createDevice("rouB", "10.10.50.20", "22", "user", "pass", "2y", "12:00")
-    createDevice("rouC", "255.255.255.255", "8888", "test", "12345", "", "")
-    
-    print(getAllDevices())
-    
-    # print(getDevicebyName("rouC"))
-    
-    # print(getDevicebyId(2))
+    pass

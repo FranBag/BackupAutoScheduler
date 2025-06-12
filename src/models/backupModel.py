@@ -46,17 +46,21 @@ def deleteBackupById(backup_id):
     connection.commit()
     connection.close()
 
+def iniciarbackup():
+    storeBackup("20-06-2024", 2, "BACKUP1")
+    storeBackup("15-05-2025", 1, "BACKUP2")
+
 if __name__ == "__main__":
+    pass
     # with open("test_media/Mina.webp", "rb") as backup_file:
     #     backup_file_binary = backup_file.read()
     
-    # storeBackup("hoymismo", 2, "holasoyunbackup")
-    
-    # storeBackup("15-05-2025", 1, "soy un backup xd")
-    
-    print(getBackupByDevice(1, "15-05-2025"))
-    
 
+    
+    # getBackupByDevice(1, "15-05-2025")
+    
+    
+    
     # foto = getAllBackupByDevice(2)[0][2]
     # with open("test_media/recuperado.webp", 'wb') as recuperado:
     #     recuperado.write(foto)
