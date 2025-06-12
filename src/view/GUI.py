@@ -1,9 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, font
-import re
-import os
-from tkcalendar import Calendar
 import datetime
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from src.models.deviceModel import obtener_dispositivos
+
 
 class BackupGUI:
     def __init__(self, master):
@@ -43,6 +45,7 @@ class BackupGUI:
                 "Periodicidad": "Semanal",
             },
         ]
+        self.simulated_data = obtener_dispositivos()
 
         self.entry_widgets = {}
         self.construir_widgets()

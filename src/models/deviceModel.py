@@ -83,7 +83,39 @@ def deleteDevice(device_id):
 #     finally:
 #         if connection:
 #             connection.close()
+def obtener_dispositivos():
+    dispositivos = []
 
+    try:
+        # Conexión a la base de datos
+        conn = sqlite.connect("backups.db")
+        cursor = conn.cursor()
+
+        # Consulta para obtener todos los dispositivos
+        cursor.execute("""
+            SELECT name, ip, user, pass, ssh_port, scheduled_date, frequency
+            FROM device
+        """)
+
+        # Procesar cada fila
+        for row in cursor.fetchall():
+            dispositivo = {
+                "Nombre": row[0],
+                "IP": row[1],
+                "Usuario": row[2],
+                "Contraseña": row[3],
+                "Puerto SSH": row[4],
+                "Hora": row[5],
+                "Periodicidad": row[6],
+            }
+            dispositivos.append(dispositivo)
+
+        conn.close()
+        return dispositivos
+
+    except sqlite.Error as e:
+        print("Error al acceder a la base de datos:", e)
+        return []
 
 def iniciardevice():
     createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "daily", "20:30")
