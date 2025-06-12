@@ -1,10 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, font
-import datetime
-import sys
+import re
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from src.models.deviceModel import obtener_dispositivos
+import datetime
 
 
 class BackupGUI:
@@ -45,7 +43,6 @@ class BackupGUI:
                 "Periodicidad": "Semanal",
             },
         ]
-        self.simulated_data = obtener_dispositivos()
 
         self.entry_widgets = {}
         self.construir_widgets()
@@ -65,7 +62,7 @@ class BackupGUI:
         self.construir_botones_superiores()
         self.construir_lista_dispositivos()
         self.construir_formulario_detalles()
-        self._construir_botones_inferiores()
+        self.construir_botones_inferiores()
 
     def construir_botones_superiores(self):
         frame = tk.Frame(self.master, pady=10, bg="#404040")
@@ -73,19 +70,9 @@ class BackupGUI:
 
         tk.Button(
             frame,
-            text="Nuevo",
-            width=12,
-            command=self._limpiar_formulario,
-            bg="#A9DCF0",
-            fg="black",
-            font=self.font_boton,
-        ).grid(row=0, column=0, padx=5)
-
-        tk.Button(
-            frame,
             text="Editar",
             width=12,
-            command=self._editar_dispositivo,
+            command=self.editar_dispositivo,
             font=self.font_boton,
         ).grid(row=0, column=1, padx=5)
 
@@ -93,7 +80,7 @@ class BackupGUI:
             frame,
             text="Eliminar",
             width=12,
-            command=self._eliminar_dispositivo,
+            command=self.eliminar_dispositivo,
             bg="red",
             fg="white",
             font=self.font_boton,
@@ -134,21 +121,42 @@ class BackupGUI:
             font=self.font_tabla_encabezado,
         )
 
+        container = tk.Frame(frame)
+        container.pack(fill="both", expand=True)
+        # Barra vertical
+        scrollbar_y = ttk.Scrollbar(container, orient="vertical")
+        scrollbar_y.pack(side="right", fill="y")
+
+        # Barrita horizontal
+        scrollbar_x = ttk.Scrollbar(container, orient="horizontal")
+        scrollbar_x.pack(side="bottom", fill="x")
+
         cols = ("Nombre", "IP", "Usuario", "Contraseña", "Periodicidad")
-        self.tree = ttk.Treeview(frame, columns=cols, show="headings", height=5)
+        self.tree = ttk.Treeview(
+            container,
+            columns=cols,
+            show="headings",
+            height=5,
+            yscrollcommand=scrollbar_y.set,
+            xscrollcommand=scrollbar_x.set,
+        )
         for col in cols:
             self.tree.heading(col, text=col)
             self.tree.column(col, width=200)
-        self.tree.pack(fill="x")
-        self.tree.bind("<<TreeviewSelect>>", self._al_seleccionar_arbol)
-        self._actualizar_vista_arbol()
+        self.tree.pack(fill="both", expand=True)
+
+        # Vincular las scrollbars con el Treeview
+        scrollbar_y.config(command=self.tree.yview)
+        scrollbar_x.config(command=self.tree.xview)
+        self.tree.bind("<<TreeviewSelect>>", self.al_seleccionar_arbol)
+        self.actualizar_vista_arbol()
 
         self.tree_menu = tk.Menu(self.master, tearoff=0)
         self.tree_menu.add_command(
-            label="Mostrar Contraseña", command=self._mostrar_contrasena_tabla
+            label="Mostrar Contraseña", command=self.mostrar_contrasena_tab
         )
         self.tree_menu.add_command(
-            label="Ocultar Contraseña", command=self._ocultar_contrasena_tabla
+            label="Ocultar Contraseña", command=self.ocultar_contrasena_tabla
         )
         for col in cols:
             if col == "Periodicidad":
@@ -164,7 +172,7 @@ class BackupGUI:
             self.tree.selection_set(row_id)
             self.tree_menu.post(event.x_root, event.y_root)
 
-    def _mostrar_contrasena_tabla(self):
+    def mostrar_contrasena_tab(self):
         for i, dispositivo in enumerate(self.simulated_data):
             self.tree.item(
                 i,
@@ -176,7 +184,7 @@ class BackupGUI:
                 ),
             )
 
-    def _ocultar_contrasena_tabla(self):
+    def ocultar_contrasena_tabla(self):
         for i, dispositivo in enumerate(self.simulated_data):
             contrasena_oculta = "*" * len(dispositivo["Contraseña"])
             self.tree.item(
@@ -240,7 +248,7 @@ class BackupGUI:
                     font=self.font_normal,
                 )
             if label_text == "Periodicidad":
-                options = ["Diaria", "Semanal", "Mensual"]
+                options = ["Diaria", "Semanal", "Mensual", "Anual"]
                 entry = ttk.Combobox(
                     frame,
                     textvariable=var,
@@ -254,6 +262,15 @@ class BackupGUI:
             entry.grid(row=row_idx, column=1, sticky="w", pady=2)
             self.entry_widgets[label_text] = entry
             row_idx += 1
+        tk.Button(
+            frame,
+            text="Limpiar",
+            width=12,
+            command=self.limpiar_formulario,
+            bg="#A9DCF0",
+            fg="black",
+            font=self.font_boton,
+        ).grid(row=row_idx, column=2, sticky="", pady=5, padx=5)
 
     def _toggle_password_visibility(self, entry):
         if entry.cget("show") == "*":
@@ -263,7 +280,7 @@ class BackupGUI:
             entry.config(show="*")
             entry.master.children["!button"].config(text="Mostrar")
 
-    def _construir_botones_inferiores(self):
+    def construir_botones_inferiores(self):
         frame = tk.Frame(self.master, pady=10, bg="#404040")
         frame.pack()
 
@@ -271,7 +288,7 @@ class BackupGUI:
             frame,
             text="Guardar",
             width=15,
-            command=self._guardar_dispositivo,
+            command=self.guardar_dispositivo,
             bg="#008000",
             fg="white",
             font=self.font_boton,
@@ -281,7 +298,7 @@ class BackupGUI:
             frame,
             text="Cancelar",
             width=15,
-            command=self._limpiar_formulario,
+            command=self.limpiar_formulario,
             font=self.font_boton,
         ).grid(row=0, column=1, padx=10)
 
@@ -289,7 +306,7 @@ class BackupGUI:
             frame, text="Probar Conexión SSH", width=20, font=self.font_boton
         ).grid(row=0, column=2, padx=10)
 
-    def _limpiar_formulario(self):
+    def limpiar_formulario(self):
         for var in self.fields.values():
             var.set("")
         self.fields["Puerto SSH"].set("22")
@@ -299,7 +316,7 @@ class BackupGUI:
         if "Nombre" in self.entry_widgets:
             self.entry_widgets["Nombre"].focus_set()
 
-    def _al_seleccionar_arbol(self, event):
+    def al_seleccionar_arbol(self, event):
         selected = self.tree.focus()
         if selected:
             index = int(selected)
@@ -308,7 +325,7 @@ class BackupGUI:
                 self.fields[key].set(data.get(key, ""))
             self.selected_id = index
 
-    def _validar_ip(self, ip):
+    def validar_ip(self, ip):
         partes = ip.strip().split(".")
         if len(partes) != 4:
             return False
@@ -317,14 +334,14 @@ class BackupGUI:
         except ValueError:
             return False
 
-    def _validar_hora(self, hora):
+    def validar_hora(self, hora):
         try:
             datetime.datetime.strptime(hora.strip(), "%H:%M")
             return True
         except ValueError:
             return False
 
-    def _guardar_dispositivo(self):
+    def guardar_dispositivo(self):
         nuevo_dato = {key: var.get().strip() for key, var in self.fields.items()}
         obligatorios = [
             "Nombre",
@@ -342,13 +359,13 @@ class BackupGUI:
             messagebox.showerror("Campos obligatorios", mensaje)
             return
 
-        if not self._validar_ip(nuevo_dato["IP"]):
+        if not self.validar_ip(nuevo_dato["IP"]):
             messagebox.showerror(
                 "IP inválida", "La dirección IP no tiene un formato válido."
             )
             return
 
-        if not self._validar_hora(nuevo_dato["Hora"]):
+        if not self.validar_hora(nuevo_dato["Hora"]):
             messagebox.showerror(
                 "Hora inválida", "La hora debe tener el formato HH:MM (24h)."
             )
@@ -369,14 +386,14 @@ class BackupGUI:
         else:
             self.simulated_data.append(nuevo_dato)
 
-        self._actualizar_vista_arbol()
-        self._limpiar_formulario()
+        self.actualizar_vista_arbol()
+        self.limpiar_formulario()
         messagebox.showinfo("Éxito", "Dispositivo guardado correctamente.")
 
-    def _editar_dispositivo(self):
+    def editar_dispositivo(self):
         selected = self.tree.focus()
         if selected:
-            self._al_seleccionar_arbol(None)
+            self.al_seleccionar_arbol(None)
             messagebox.showinfo(
                 "Edición",
                 "Puedes modificar los campos y presionar Guardar para actualizar el dispositivo.",
@@ -386,7 +403,7 @@ class BackupGUI:
                 "Seleccionar", "Por favor selecciona un dispositivo para editar."
             )
 
-    def _eliminar_dispositivo(self):
+    def eliminar_dispositivo(self):
         selected = self.tree.focus()
         if selected:
             index = int(selected)
@@ -395,15 +412,15 @@ class BackupGUI:
             )
             if confirm:
                 self.simulated_data.pop(index)
-                self._actualizar_vista_arbol()
-                self._limpiar_formulario()
+                self.actualizar_vista_arbol()
+                self.limpiar_formulario()
                 messagebox.showinfo("Eliminado", "Dispositivo eliminado correctamente.")
         else:
             messagebox.showwarning(
                 "Seleccionar", "Por favor selecciona un dispositivo para eliminar."
             )
 
-    def _actualizar_vista_arbol(self):
+    def actualizar_vista_arbol(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
         for i, dispositivo in enumerate(self.simulated_data):
