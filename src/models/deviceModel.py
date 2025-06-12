@@ -5,7 +5,7 @@ def createDevice(name, user, password, freq, time):
     cursor = connection.cursor()
     
     query = "INSERT INTO device(`name`, `user`, pass, frequency, scheduled_date) VALUES (?, ?, ?, ?, ?)"
-    cursor.execute(query, [name, user, password, freq, time]) # Los arrays deberían de reemplazarse por tuplas (x,x,x)
+    cursor.execute(query, (name, user, password, freq, time))
     
     connection.commit()
     connection.close()
@@ -15,7 +15,7 @@ def getDevicebyName(name):
     cursor = connection.cursor()
     
     query = "SELECT * FROM device WHERE name = ?"
-    cursor.execute(query, [name]) # (x,)
+    cursor.execute(query, (name,))
     result = cursor.fetchall()
     
     connection.commit()
@@ -27,7 +27,7 @@ def getDevicebyId(device_id):
     cursor = connection.cursor()
     
     query = "SELECT * FROM device WHERE id = ?"
-    cursor.execute(query, [device_id])
+    cursor.execute(query, (device_id,))
     result = cursor.fetchall()
     
     connection.commit()
@@ -51,7 +51,7 @@ def updateDevice(device_id, column, new_value):
     cursor = connection.cursor()
     
     query = f"UPDATE device SET {column} = ? WHERE id = ?"
-    cursor.execute(query, [new_value, device_id])
+    cursor.execute(query, (new_value, device_id))
     
     connection.commit()
     connection.close()
@@ -61,7 +61,7 @@ def deleteDevice(device_id):
     cursor = connection.cursor()
     
     query = "DELETE FROM device WHERE id = ?"
-    cursor.execute(query,[device_id])
+    cursor.execute(query, (device_id,))
     
     connection.commit()
     connection.close()

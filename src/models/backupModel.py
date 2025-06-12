@@ -5,7 +5,7 @@ def storeBackup(date, device_id, backup_file):
     cursor = connection.cursor()
     
     query = "INSERT INTO backup(`date`, device_id, backup_file) VALUES(?, ?, ?)"
-    cursor.execute(query, [date, device_id, backup_file])
+    cursor.execute(query, (date, device_id, backup_file))
     
     connection.commit()
     connection.close()
@@ -15,7 +15,7 @@ def getAllBackupByDevice(device_id):
     cursor = connection.cursor()
     
     query = "SELECT * FROM backup WHERE device_id = ?"
-    cursor.execute(query, [device_id])
+    cursor.execute(query, (device_id,))
     result = cursor.fetchall()
     
     connection.commit()
@@ -28,7 +28,7 @@ def getBackupByDevice(device_id, date):
     cursor = connection.cursor()
     
     query = "SELECT * FROM backup WHERE device_id = ? AND date = ?"
-    cursor.execute(query, [device_id, date])
+    cursor.execute(query, (device_id, date))
     result = cursor.fetchall()
     
     connection.commit()
@@ -41,7 +41,7 @@ def deleteBackupById(backup_id):
     cursor = connection.cursor()
     
     query = "DELETE FROM backup WHERE id = ?"
-    cursor.execute(query, [backup_id])
+    cursor.execute(query, (backup_id,))
     
     connection.commit()
     connection.close()
