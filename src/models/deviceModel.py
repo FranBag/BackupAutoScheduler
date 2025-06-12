@@ -1,15 +1,15 @@
 import sqlite3 as sqlite
 
-def createDevice(name, user, password, freq, time):
+def createDevice(name, ip, ssh_port, user, password, freq, time):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
     
-    query = "INSERT INTO device(`name`, `user`, pass, frequency, scheduled_date) VALUES (?, ?, ?, ?, ?)"
-    cursor.execute(query, (name, user, password, freq, time))
+    query = "INSERT INTO device(`name`, ip, ssh_port, `user`, pass, frequency, scheduled_date) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    cursor.execute(query, (name, ip, ssh_port, user, password, freq, time))
     
     connection.commit()
     connection.close()
-
+    
 def getDevicebyName(name):
     connection = sqlite.connect("backups.db")
     cursor = connection.cursor()
@@ -87,12 +87,15 @@ def deleteDevice(device_id):
 
 
 if __name__ == "__main__":
-    createDevice("rouA", "admin", "admin", "1d", "20:30")
-    createDevice("rouB", "user", "pass", "2y", "12:00")
-    createDevice("rouC", "test", "12345", "", "")
+    # for i in range(3):
+    #     deleteDevice(i+1)
+    
+    createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "1d", "20:30")
+    createDevice("rouB", "10.10.50.20", "22", "user", "pass", "2y", "12:00")
+    createDevice("rouC", "255.255.255.255", "8888", "test", "12345", "", "")
     
     print(getAllDevices())
     
-    print(getDevicebyName("rouC"))
+    # print(getDevicebyName("rouC"))
     
-    print(getDevicebyId(2))
+    # print(getDevicebyId(2))

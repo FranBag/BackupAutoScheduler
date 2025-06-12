@@ -16,12 +16,15 @@ def createTableDevice():
         CREATE TABLE device(
             id integer primary key,
             `name` text not null,
+            ip text not null unique,
+            ssh_port text DEFAULT "22",
             `user` text,
             pass text,
             frequency text,
             scheduled_date text
         )
         """)
+    
     connection.commit()
     connection.close()
 
