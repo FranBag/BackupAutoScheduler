@@ -312,3 +312,33 @@ def verificar_fecha_router(host, usuario, contrasena, max_diferencia_dias=1):
         return False, f"Error al verificar fecha/hora: {e}"
     finally:
         cliente.close()
+        
+def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
+    """
+    Configura la fecha y hora del router MikroTik igual que la fecha/hora local de la PC.
+    """
+    # Obtener fecha y hora local en el formato esperado por MikroTik (MMM/DD/YYYY HH:MM:SS)
+    ahora = datetime.now()
+    fecha_str = ahora.strftime("%b/%d/%Y").lower()  # ej: jun/13/2025 (en minúsculas)
+    hora_str = ahora.strftime("%H:%M:%S")          # ej: 14:35:20
+
+    comando = f'/system clock set date={fecha_str} time={hora_str}'
+
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        cliente.connect(hostname=host,port=puerto, username=usuario, password=contrasena, timeout=10)
+        stdin, stdout, stderr = cliente.exec_command(comando)
+        error = stderr.read().decode()
+        if error:
+            print(f"❌ Error al configurar fecha/hora: {error}")
+        else:
+            print(f"✅ Fecha y hora configuradas a {fecha_str} {hora_str} en el router.")
+    except Exception as e:
+        print(f"❌ Error de conexión o ejecución: {e}")
+    finally:
+        cliente.close()
+    
+    if not verificar_fecha_router(host, usuario, contrasena, puerto):
+        return Exception("error en la hora y fecha")
