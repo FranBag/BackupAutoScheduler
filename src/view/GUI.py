@@ -2,8 +2,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox, font
 import re
 import os
+import sys
 import datetime
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from controllers import deviceController
 
 class BackupGUI:
     def __init__(self, master):
@@ -23,29 +26,9 @@ class BackupGUI:
         self.fields = self.inicializar_campos()
         self.selected_id = None
 
-        self.simulated_data = [
-            {
-                "Nombre": "Router Central",
-                "IP": "192.168.1.1",
-                "Usuario": "admin",
-                "Contraseña": "admin123",
-                "Puerto SSH": "22",
-                "Hora": "08:00",
-                "Periodicidad": "Diaria",
-            },
-            {
-                "Nombre": "Switch Piso3",
-                "IP": "192.168.1.2",
-                "Usuario": "user",
-                "Contraseña": "pass",
-                "Puerto SSH": "22",
-                "Hora": "12:00",
-                "Periodicidad": "Semanal",
-            },
-        ]
-
         self.entry_widgets = {}
         self.construir_widgets()
+        self.actualizar_vista_arbol() # NUEVO
 
     def inicializar_campos(self):
         return {
@@ -53,9 +36,9 @@ class BackupGUI:
             "IP": tk.StringVar(),
             "Usuario": tk.StringVar(),
             "Contraseña": tk.StringVar(),
-            "Puerto SSH": tk.StringVar(value="22"),
-            "Hora": tk.StringVar(value="08:00"),
-            "Periodicidad": tk.StringVar(value="Diaria"),
+            "Puerto SSH": tk.StringVar(),
+            "Hora": tk.StringVar(),
+            "Periodicidad": tk.StringVar(), # NUEVO: quité los valores con los que se inicializaban
         }
 
     def construir_widgets(self):
@@ -104,6 +87,12 @@ class BackupGUI:
             command=self.abrir_ventana_backups,
         ).grid(row=0, column=3, padx=5)
 
+    """
+    ////////////////////////////////////////////////////
+    ///////////////    FRAN HACE ESTO    ///////////////
+    ////////////////////////////////////////////////////
+    """
+
     def abrir_ventana_backups(self):
         ventana = tk.Toplevel(self.master)
         ventana.title("Historial de Backups")
@@ -150,6 +139,12 @@ class BackupGUI:
         ]
         for backup in backups_simulados:
             tree.insert("", "end", values=backup)
+
+    """
+    ////////////////////////////////////////////////////
+    ///////////////    FRAN HACE ESTO    ///////////////
+    ////////////////////////////////////////////////////
+    """
 
     def construir_lista_dispositivos(self):
 
@@ -233,7 +228,7 @@ class BackupGUI:
         self.limpiar_formulario()
         for entry in self.entry_widgets.values():
             entry.config(state="normal")
-        messagebox.showinfo(
+            messagebox.showinfo(
             "Nuevo dispositivo", "Puedes ingresar los detalles de un nuevo dispositivo."
         )
 
@@ -243,30 +238,23 @@ class BackupGUI:
             self.tree.selection_set(row_id)
             self.tree_menu.post(event.x_root, event.y_root)
 
-    def mostrar_contrasena_tab(self):
-        for i, dispositivo in enumerate(self.simulated_data):
-            self.tree.item(
-                i,
-                values=(
-                    dispositivo["Nombre"],
-                    dispositivo["IP"],
-                    dispositivo["Usuario"],
-                    dispositivo["Contraseña"],
-                ),
-            )
+    def mostrar_contrasena_tab(self):       # NUEVO
+        for item_id in self.tree.get_children():
+            values = list(self.tree.item(item_id, 'values'))
+            device_id = self.tree.item(item_id, 'tags')[0] if self.tree.item(item_id, 'tags') else None
+            if device_id is not None:
+                device_data = deviceController.get_device_by_id(device_id)
+                if device_data:
+                    values[3] = device_data["Contraseña"]
+                    self.tree.item(item_id, values=values)
 
-    def ocultar_contrasena_tabla(self):
-        for i, dispositivo in enumerate(self.simulated_data):
-            contrasena_oculta = "*" * len(dispositivo["Contraseña"])
-            self.tree.item(
-                i,
-                values=(
-                    dispositivo["Nombre"],
-                    dispositivo["IP"],
-                    dispositivo["Usuario"],
-                    contrasena_oculta,
-                ),
-            )
+    def ocultar_contrasena_tabla(self):     # NUEVO
+        for item_id in self.tree.get_children():
+            values = list(self.tree.item(item_id, 'values'))
+            contrasena_actual = values[3]
+            contrasena_oculta = "*" * len(contrasena_actual) if contrasena_actual else ""
+            values[3] = contrasena_oculta
+            self.tree.item(item_id, values=values)
 
     def construir_formulario_detalles(self):
 
@@ -333,7 +321,9 @@ class BackupGUI:
                     font=self.font_normal,
                 )
                 entry.current(0)
-
+                if var.get() == "":         # NUEVO
+                    var.set(options[0])
+                    
             entry.grid(row=row_idx, column=1, sticky="w", pady=2)
             self.entry_widgets[label_text] = entry
             row_idx += 1
@@ -370,6 +360,23 @@ class BackupGUI:
             self.limpiar_btn.config(state="disabled")
 
     def _toggle_password_visibility(self, entry):
+        
+        # POSIBLE MEJORA(reemplaza toda la implementación anterior)
+        # if entry.cget("show") == "*":
+        #     entry.config(show="")
+        #     for widget in entry.master.winfo_children():
+        #         if isinstance(widget, tk.Button) and widget.grid_info().get("row") == entry.grid_info().get("row") and widget.grid_info().get("column") == 2:
+        #             widget.config(text="Ocultar")
+        #             break
+        # else:
+        #     entry.config(show="*")
+        #     for widget in entry.master.winfo_children():
+        #         if isinstance(widget, tk.Button) and widget.grid_info().get("row") == entry.grid_info().get("row") and widget.grid_info().get("column") == 2:
+        #             widget.config(text="Mostrar")
+        #             break
+        
+        # Se supone que de la forma anterior es mejor, porque !button no siempre va a ser el botón que buscás.
+        
         if entry.cget("show") == "*":
             entry.config(show="")
             entry.master.children["!button"].config(text="Ocultar")
@@ -408,20 +415,42 @@ class BackupGUI:
             var.set("")
         self.fields["Puerto SSH"].set("22")
         self.fields["Hora"].set("08:00")
+        self.fields["Periodicidad"].set("Diaria")   # NUEVO
         self.selected_id = None
         self.tree.selection_set(())
         if "Nombre" in self.entry_widgets:
             self.entry_widgets["Nombre"].focus_set()
 
-    def al_seleccionar_arbol(self, event):
-        selected = self.tree.focus()
-        if selected:
-            index = int(selected)
-            data = self.simulated_data[index]
-            for key in self.fields:
-                self.fields[key].set(data.get(key, ""))
-            self.selected_id = index
+        # POSIBLE MEJORA(se agrega, no reemplaza nada)
+        # for label_text, entry_widget in self.entry_widgets.items():
+        #     if label_text == "Contraseña":
+        #         entry_widget.config(show="*")
+        #         for widget in entry_widget.master.winfo_children():
+        #             if isinstance(widget, tk.Button) and widget.grid_info().get("row") == entry_widget.grid_info().get("row") and widget.grid_info().get("column") == 2:
+        #                 widget.config(text="Mostrar")
+        #                 break
 
+    def al_seleccionar_arbol(self, event):  # NUEVO
+        selected_item = self.tree.focus()
+        if selected_item:
+            device_id = self.tree.item(selected_item, 'tags')[0]
+            self.selected_device_id = device_id
+            
+            device_data = deviceController.get_device_by_id(device_id)
+            if device_data:
+                for key, var in self.fields.items():
+                    var.set(device_data.get(key, ""))
+
+            # POSIBLE MEJORA(se agrega)
+            # if "Contraseña" in self.entry_widgets:
+            #     self.entry_widgets["Contraseña"].config(show="*")
+            #     for widget in self.entry_widgets["Contraseña"].master.winfo_children():
+            #         if isinstance(widget, tk.Button) and widget.grid_info().get("row") == self.entry_widgets["Contraseña"].grid_info().get("row") and widget.grid_info().get("column") == 2:
+            #             widget.config(text="Mostrar")
+            #             break
+        else:
+            self.limpiar_formulario()
+            
     def validar_ip(self, ip):
         partes = ip.strip().split(".")
         if len(partes) != 4:
@@ -478,14 +507,31 @@ class BackupGUI:
             )
             return
 
-        if self.selected_id is not None:
-            self.simulated_data[self.selected_id] = nuevo_dato
+        if self.selected_device_id is not None:
+
+            success = deviceController.update_device(self.selected_device_id, nuevo_dato)
+            if success:
+                messagebox.showinfo("Éxito", "Dispositivo actualizado correctamente.")
+            else:
+                messagebox.showerror("Error", "No se pudo actualizar el dispositivo.")
         else:
-            self.simulated_data.append(nuevo_dato)
+            success = deviceController.add_device(
+                nuevo_dato["Nombre"],
+                nuevo_dato["IP"],
+                nuevo_dato["Puerto SSH"],
+                nuevo_dato["Usuario"],
+                nuevo_dato["Contraseña"],
+                nuevo_dato["Periodicidad"],
+                nuevo_dato["Hora"],
+            )
+            if success:
+                messagebox.showinfo("Éxito", "Dispositivo guardado correctamente.")
+            else:
+                messagebox.showerror("Error", "No se pudo guardar el dispositivo.")
 
         self.actualizar_vista_arbol()
         self.limpiar_formulario()
-        messagebox.showinfo("Éxito", "Dispositivo guardado correctamente.")
+
 
     def editar_dispositivo(self):
         selected = self.tree.focus()
@@ -501,38 +547,45 @@ class BackupGUI:
                 "Seleccionar", "Por favor selecciona un dispositivo para editar."
             )
 
-    def eliminar_dispositivo(self):
+    def eliminar_dispositivo(self):     # NUEVO
         selected = self.tree.focus()
         if selected:
-            index = int(selected)
+            device_id = self.tree.item(selected, 'tags')[0]
             confirm = messagebox.askyesno(
                 "Confirmar", "¿Estás seguro de que deseas eliminar este dispositivo?"
             )
             if confirm:
-                self.simulated_data.pop(index)
-                self.actualizar_vista_arbol()
-                self.limpiar_formulario()
-                messagebox.showinfo("Eliminado", "Dispositivo eliminado correctamente.")
+                success = deviceController.delete_device(device_id)
+                if success:
+                    messagebox.showinfo("Eliminado", "Dispositivo eliminado correctamente.")
+                    self.actualizar_vista_arbol()
+                    self.limpiar_formulario()
+                else:
+                    messagebox.showerror("Error", "No se pudo eliminar el dispositivo.")
         else:
             messagebox.showwarning(
                 "Seleccionar", "Por favor selecciona un dispositivo para eliminar."
             )
 
-    def actualizar_vista_arbol(self):
+    def actualizar_vista_arbol(self):   # NUEVO
         for item in self.tree.get_children():
             self.tree.delete(item)
-        for i, dispositivo in enumerate(self.simulated_data):
-            contrasena_oculta = "*" * len(dispositivo["Contraseña"])
+        
+        devices = deviceController.get_all_devices_data()
+        
+        for device in devices:
+            contrasena_oculta = "*" * len(device["Contraseña"])
             self.tree.insert(
                 "",
                 "end",
-                iid=i,
+                iid=device["ID"],
+                tags=(device["ID"],),
                 values=(
-                    dispositivo["Nombre"],
-                    dispositivo["IP"],
-                    dispositivo["Usuario"],
+                    device["Nombre"],
+                    device["IP"],
+                    device["Usuario"],
                     contrasena_oculta,
-                    dispositivo["Periodicidad"],
+                    device["Periodicidad"],
                 ),
             )
 

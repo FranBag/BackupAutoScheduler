@@ -85,9 +85,9 @@ def deleteDevice(device_id):
 #             connection.close()
 
 def iniciardevice():
-    createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "daily", "20:30")
-    createDevice("rouB", "10.10.50.20", "22", "user", "pass", "yearly", "12:00")
-    createDevice("rouC", "255.255.255.255", "8888", "weekly", "12345", "", "")
+    createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "Diaria", "20:30")
+    createDevice("rouB", "10.10.50.20", "22", "user", "pass", "Anual", "12:00")
+    createDevice("rouC", "255.255.255.255", "8888", "test", "12345", "", "")
 
 if __name__ == "__main__":
 
