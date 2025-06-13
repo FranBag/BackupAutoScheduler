@@ -24,7 +24,7 @@ class BackupGUI:
         self.font_tabla_contenido = font.Font(family="Verdana", size=9)
 
         self.fields = self.inicializar_campos()
-        self.selected_id = None
+        self.selected_device_id = None
 
         self.entry_widgets = {}
         self.construir_widgets()
@@ -222,13 +222,11 @@ class BackupGUI:
 
         self.tree.bind("<Button-3>", self._mostrar_menu_tabla)
 
-    def habilitar_nuevo_dispositivo(
-        self,
-    ):
+    def habilitar_nuevo_dispositivo(self):
         self.limpiar_formulario()
         for entry in self.entry_widgets.values():
             entry.config(state="normal")
-            messagebox.showinfo(
+        messagebox.showinfo(
             "Nuevo dispositivo", "Puedes ingresar los detalles de un nuevo dispositivo."
         )
 
@@ -413,8 +411,7 @@ class BackupGUI:
     def limpiar_formulario(self):
         for var in self.fields.values():
             var.set("")
-        self.fields["Puerto SSH"].set("22")
-        self.fields["Hora"].set("08:00")
+        self.fields["Hora"].set("HH:mm")
         self.fields["Periodicidad"].set("Diaria")   # NUEVO
         self.selected_id = None
         self.tree.selection_set(())
