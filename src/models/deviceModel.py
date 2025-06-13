@@ -65,24 +65,6 @@ def deleteDevice(device_id):
     
     connection.commit()
     connection.close()
-    
-
-#     try:
-#         connection = sqlite3.connect("backups.db")
-#         cursor = connection.cursor()
-#         query = "SELECT * FROM device"
-#         cursor.execute(query)
-#         devices = cursor.fetchall()
-#         print("All Devices:")
-#         for device in devices:
-#             print(device)
-#         return devices # Return devices for potential further use
-#     except sqlite3.Error as e:
-#         print(f"Error retrieving devices: {e}")
-#         return []
-#     finally:
-#         if connection:
-#             connection.close()
 
 def iniciardevice():
     createDevice("rouA", "192.168.50.120", "2222", "admin", "admin", "Diaria", "20:30")
@@ -90,6 +72,4 @@ def iniciardevice():
     createDevice("rouC", "255.255.255.255", "8888", "test", "12345", "", "")
 
 if __name__ == "__main__":
-
-    
     pass

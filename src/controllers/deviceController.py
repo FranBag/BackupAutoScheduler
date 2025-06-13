@@ -22,6 +22,11 @@ def get_all_devices_data():
     return formatted_devices
 
 def add_device(name, ip, ssh_port, user, password, freq, time):
+    valid_freq = ["Diaria", "Semanal", "Mensual", "Anual"]
+    
+    if freq not in valid_freq:
+        print(f"Frecuencia inválida: '{freq}'. Debe ser una de {valid_freq}.")
+        return False
     try:
         deviceModel.createDevice(name, ip, ssh_port, user, password, freq, time)
         return True
@@ -31,22 +36,31 @@ def add_device(name, ip, ssh_port, user, password, freq, time):
 
 def update_device(device_id, data):
     try:
+        valid_freq = ["Diaria", "Semanal", "Mensual", "Anual"]
+        db_column_map = {
+            "Nombre": "name",
+            "IP": "ip",
+            "Puerto SSH": "ssh_port",
+            "Usuario": "user",
+            "Contraseña": "pass",
+            "Periodicidad": "frequency",
+            "Hora": "scheduled_date"
+        }
+
         for column, new_value in data.items():
-            db_column_map = {
-                "Nombre": "name",
-                "IP": "ip",
-                "Puerto SSH": "ssh_port",
-                "Usuario": "user",
-                "Contraseña": "pass",
-                "Periodicidad": "frequency",
-                "Hora": "scheduled_date"
-            }
+            if column == "Periodicidad" and new_value not in valid_freq:
+                print(f"Frecuencia inválida: '{new_value}'. Debe ser una de {valid_freq}.")
+                return False
+
             if column in db_column_map:
                 deviceModel.updateDevice(device_id, db_column_map[column], new_value)
+        
         return True
+
     except Exception as e:
         print(f"Error al actualizar dispositivo: {e}")
         return False
+
 
 def delete_device(device_id):
     try:
