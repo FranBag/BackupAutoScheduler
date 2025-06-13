@@ -57,7 +57,7 @@ class BackupGUI:
             text="Nuevo",
             width=12,
             command=self.habilitar_nuevo_dispositivo,
-            bg="#BAE7E1",
+            bg="#8575E4",
             fg="white",
             font=self.font_boton,
         ).grid(row=0, column=0, padx=5)
@@ -225,6 +225,7 @@ class BackupGUI:
 
     def habilitar_nuevo_dispositivo(self):
         self.limpiar_formulario()
+        self.habilitar_campos()
         for entry in self.entry_widgets.values():
             entry.config(state="normal")
         messagebox.showinfo(
@@ -332,7 +333,7 @@ class BackupGUI:
             entry.grid(row=row_idx, column=1, sticky="w", pady=2)
             self.entry_widgets[label_text] = entry
             row_idx += 1
-        self.limpiar_btn = tk.Button(
+        """self.limpiar_btn = tk.Button(
             frame,
             text="Limpiar",
             width=12,
@@ -342,7 +343,7 @@ class BackupGUI:
             font=self.font_boton,
             state="disabled",  # Bloqueado por defecto
         )
-        self.limpiar_btn.grid(row=row_idx, column=2, sticky="", pady=5, padx=5)
+        self.limpiar_btn.grid(row=row_idx, column=2, sticky="", pady=5, padx=5)"""
 
     def habilitar_campos(
         self,
@@ -537,6 +538,7 @@ class BackupGUI:
 
         self.actualizar_vista_arbol()
         self.limpiar_formulario()
+        self.bloquear_campos()
 
     def editar_dispositivo(self):
         selected = self.tree.focus()
@@ -567,6 +569,7 @@ class BackupGUI:
                     )
                     self.actualizar_vista_arbol()
                     self.limpiar_formulario()
+                    self.bloquear_campos()
                 else:
                     messagebox.showerror("Error", "No se pudo eliminar el dispositivo.")
         else:
