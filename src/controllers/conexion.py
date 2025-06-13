@@ -1,7 +1,11 @@
 import paramiko
 from ftplib import FTP
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+
+#comando para que el router tome automaticamente fecha y hora
+#/system ntp client set enabled=yes primary-ntp=8.8.8.8 secondary-ntp=8.8.4.4
+
 
 def ssh_ejecutar_comando(host, usuario, contrasena, puerto, comando):
     """
@@ -70,7 +74,32 @@ def verificar_conexion_ssh(host, usuario, contrasena, puerto=22):
     finally:
         cliente.close()
     
+def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
+    """
+    Configura la fecha y hora del router MikroTik igual que la fecha/hora local de la PC.
+    """
+    # Obtener fecha y hora local en el formato esperado por MikroTik (MMM/DD/YYYY HH:MM:SS)
+    ahora = datetime.now()
+    fecha_str = ahora.strftime("%b/%d/%Y").lower()  # ej: jun/13/2025 (en minúsculas)
+    hora_str = ahora.strftime("%H:%M:%S")          # ej: 14:35:20
 
+    comando = f'/system clock set date={fecha_str} time={hora_str}'
+
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=10)
+        stdin, stdout, stderr = cliente.exec_command(comando)
+        error = stderr.read().decode()
+        if error:
+            print(f"❌ Error al configurar fecha/hora: {error}")
+        else:
+            print(f"✅ Fecha y hora configuradas a {fecha_str} {hora_str} en el router.")
+    except Exception as e:
+        print(f"❌ Error de conexión o ejecución: {e}")
+    finally:
+        cliente.close()
 
 def genera_backup(host, usuario, contrasena, puerto):
     ssh_ejecutar_comando(host, usuario, contrasena, puerto, "system/backup/save")
@@ -172,3 +201,114 @@ def descargar_backup_mas_reciente(host, usuario, contrasena, puerto, ruta_local,
 
     except Exception as e:
         print(f"❌ Error FTP al descargar el archivo: {e}")
+
+def genera_y_descarga_backup(host, usuario, contrasena, puerto, ruta_local, puerto_ftp=21):
+    genera_backup(host, usuario, contrasena, puerto)
+    descargar_backup_mas_reciente(host, usuario, contrasena, puerto,ruta_local, puerto_ftp=21)
+
+
+def borrar_archivos_viejos(host, usuario, contrasena,puerto,  meses=6):
+    """
+    Borra archivos en Mikrotik con antigüedad mayor a 'meses' vía SSH.
+    
+    Args:
+        host (str): IP o hostname del Mikrotik.
+        usuario (str): Usuario SSH.
+        contrasena (str): Contraseña.
+        meses (int): Edad mínima en meses para borrar (por defecto 6).
+    """
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=10)
+        _, stdout, _ = cliente.exec_command('/file print detail')
+        salida = stdout.read().decode()
+
+        patron = r'name="(.+?)".*?creation-time=(\S+ \S+)'
+        fecha_corte = datetime.now() - timedelta(days=meses*30)  # Aproximado 30 días/mes
+
+        archivos_viejos = []
+        for match in re.finditer(patron, salida):
+            nombre, fecha = match.groups()
+            try:
+                fecha_dt = datetime.strptime(fecha, "%b/%d/%Y %H:%M:%S")
+                if fecha_dt < fecha_corte:
+                    archivos_viejos.append(nombre)
+            except ValueError:
+                continue
+
+        if not archivos_viejos:
+            print("No hay archivos con más de", meses, "meses para borrar.")
+            return
+
+        print(f"Archivos a borrar ({len(archivos_viejos)}):", archivos_viejos)
+
+        for archivo in archivos_viejos:
+            comando_borrar = f'/file remove [find name="{archivo}"]'
+            cliente.exec_command(comando_borrar)
+            print(f"Archivo borrado: {archivo}")
+
+        print("✅ Proceso de borrado finalizado.")
+
+    except Exception as e:
+        print(f"Error SSH: {e}")
+    finally:
+        cliente.close()
+        
+
+
+
+def verificar_fecha_router(host, usuario, contrasena, max_diferencia_dias=1):
+    """
+    Verifica que la fecha/hora del router Mikrotik no difiera más de max_diferencia_dias de la fecha local.
+    
+    Args:
+        host (str): IP o hostname del Mikrotik.
+        usuario (str): Usuario SSH.
+        contrasena (str): Contraseña.
+        max_diferencia_dias (int): Días máximo de diferencia permitida (default 1).
+        
+    Returns:
+        bool, str: (True, mensaje) si está OK, (False, mensaje_error) si hay demasiada diferencia.
+    """
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        cliente.connect(hostname=host, username=usuario, password=contrasena, timeout=10)
+        _, stdout, _ = cliente.exec_command('/system clock print')
+        salida = stdout.read().decode()
+
+        # Salida típica:
+        # time: 14:23:10
+        # date: jun/13/2025
+
+        # Extraer time y date usando regex
+        time_match = re.search(r'time:\s*(\d{2}:\d{2}:\d{2})', salida)
+        date_match = re.search(r'date:\s*([a-z]{3}/\d{1,2}/\d{4})', salida, re.IGNORECASE)
+
+        if not time_match or not date_match:
+            return False, "No se pudo extraer fecha/hora del router."
+
+        hora_str = time_match.group(1)
+        fecha_str = date_match.group(1).lower()
+
+        # Parsear fecha y hora Mikrotik
+        fecha_hora_str = f"{fecha_str} {hora_str}"  # ej: jun/13/2025 14:23:10
+        fecha_hora = datetime.strptime(fecha_hora_str, "%b/%d/%Y %H:%M:%S")
+
+        # Obtener fecha/hora local
+        ahora_local = datetime.now()
+
+        diferencia = abs(ahora_local - fecha_hora)
+
+        if diferencia > timedelta(days=max_diferencia_dias):
+            return False, f"Diferencia de fecha/hora demasiado grande: {diferencia}."
+
+        return True, "Fecha/hora del router está dentro del rango aceptable."
+
+    except Exception as e:
+        return False, f"Error al verificar fecha/hora: {e}"
+    finally:
+        cliente.close()
