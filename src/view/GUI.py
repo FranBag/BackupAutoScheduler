@@ -70,6 +70,16 @@ class BackupGUI:
 
         tk.Button(
             frame,
+            text="Nuevo",
+            width=12,
+            command=self.habilitar_nuevo_dispositivo,
+            bg="#BAE7E1",
+            fg="white",
+            font=self.font_boton,
+        ).grid(row=0, column=0, padx=5)
+
+        tk.Button(
+            frame,
             text="Editar",
             width=12,
             command=self.editar_dispositivo,
@@ -86,9 +96,60 @@ class BackupGUI:
             font=self.font_boton,
         ).grid(row=0, column=2, padx=5)
 
-        tk.Button(frame, text="Realizar Backup", width=16, font=self.font_boton).grid(
-            row=0, column=3, padx=5
+        tk.Button(
+            frame,
+            text="Gestionar Backup",
+            width=16,
+            font=self.font_boton,
+            command=self.abrir_ventana_backups,
+        ).grid(row=0, column=3, padx=5)
+
+    def abrir_ventana_backups(self):
+        ventana = tk.Toplevel(self.master)
+        ventana.title("Historial de Backups")
+        ventana.geometry("600x400")
+        ventana.configure(bg="#404040")
+        ventana.resizable(False, False)
+        tk.Label(
+            ventana,
+            text="Lista de Backups Realizados",
+            bg="#404040",
+            fg="white",
+            font=self.font_titulo,
+        ).pack(pady=10)
+
+        frame_tabla = tk.Frame(ventana, bg="#404040")
+        frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scrollbar_y = ttk.Scrollbar(frame_tabla, orient="vertical")
+        scrollbar_y.pack(side="right", fill="y")
+        scrollbar_x = ttk.Scrollbar(frame_tabla, orient="horizontal")
+        scrollbar_x.pack(side="bottom", fill="x")
+
+        columnas = ("Fecha", "Dispositivo", "Estado", "Ruta")
+        tree = ttk.Treeview(
+            frame_tabla,
+            columns=columnas,
+            show="headings",
+            yscrollcommand=scrollbar_y.set,
+            xscrollcommand=scrollbar_x.set,
+            height=10,
         )
+        for col in columnas:
+            tree.heading(col, text=col)
+            tree.column(col, width=140)
+
+        tree.pack(fill="both", expand=True)
+        scrollbar_y.config(command=tree.yview)
+        scrollbar_x.config(command=tree.xview)
+
+        backups_simulados = [
+            ("2025-06-10 08:00", "Router Central", "Éxito", "/backups/router1.bak"),
+            ("2025-06-11 12:00", "Switch Piso3", "Error", "—"),
+            ("2025-06-12 08:00", "Router Central", "Éxito", "/backups/router1.bak"),
+        ]
+        for backup in backups_simulados:
+            tree.insert("", "end", values=backup)
 
     def construir_lista_dispositivos(self):
 
@@ -166,6 +227,16 @@ class BackupGUI:
 
         self.tree.bind("<Button-3>", self._mostrar_menu_tabla)
 
+    def habilitar_nuevo_dispositivo(
+        self,
+    ):
+        self.limpiar_formulario()
+        for entry in self.entry_widgets.values():
+            entry.config(state="normal")
+        messagebox.showinfo(
+            "Nuevo dispositivo", "Puedes ingresar los detalles de un nuevo dispositivo."
+        )
+
     def _mostrar_menu_tabla(self, event):
         row_id = self.tree.identify_row(event.y)
         if row_id:
@@ -226,17 +297,20 @@ class BackupGUI:
                     insertbackground="white",
                     font=self.font_normal,
                     show="*",
+                    state="disabled",
                 )
-
                 toggle_button = tk.Button(
                     frame,
                     text="Mostrar",
+                    width=12,
                     command=lambda e=entry: self._toggle_password_visibility(e),
                     bg="#606060",
                     fg="white",
                     font=self.font_normal,
+                    state="disabled",
                 )
                 toggle_button.grid(row=row_idx, column=2, padx=5)
+                self.entry_widgets["__toggle_button"] = toggle_button
             else:
                 entry = tk.Entry(
                     frame,
@@ -246,6 +320,7 @@ class BackupGUI:
                     fg="white",
                     insertbackground="white",
                     font=self.font_normal,
+                    state="disabled",
                 )
             if label_text == "Periodicidad":
                 options = ["Diaria", "Semanal", "Mensual", "Anual"]
@@ -253,7 +328,7 @@ class BackupGUI:
                     frame,
                     textvariable=var,
                     values=options,
-                    state="readonly",
+                    state="disabled",
                     width=32,
                     font=self.font_normal,
                 )
@@ -262,7 +337,7 @@ class BackupGUI:
             entry.grid(row=row_idx, column=1, sticky="w", pady=2)
             self.entry_widgets[label_text] = entry
             row_idx += 1
-        tk.Button(
+        self.limpiar_btn = tk.Button(
             frame,
             text="Limpiar",
             width=12,
@@ -270,7 +345,29 @@ class BackupGUI:
             bg="#A9DCF0",
             fg="black",
             font=self.font_boton,
-        ).grid(row=row_idx, column=2, sticky="", pady=5, padx=5)
+            state="disabled",  # Bloqueado por defecto
+        )
+        self.limpiar_btn.grid(row=row_idx, column=2, sticky="", pady=5, padx=5)
+
+    def habilitar_campos(
+        self,
+    ):  # Habilita todos los campos de entrada y botones relacionados.
+        for entry in self.entry_widgets.values():
+            entry.config(state="normal")
+        if "__toggle_button" in self.entry_widgets:
+            self.entry_widgets["__toggle_button"].config(state="normal")
+        if hasattr(self, "limpiar_btn"):
+            self.limpiar_btn.config(state="normal")
+
+    def bloquear_campos(
+        self,
+    ):  # Deshabilita todos los campos de entrada y botones relacionados.
+        for entry in self.entry_widgets.values():
+            entry.config(state="disabled")
+        if "__toggle_button" in self.entry_widgets:
+            self.entry_widgets["__toggle_button"].config(state="disabled")
+        if hasattr(self, "limpiar_btn"):
+            self.limpiar_btn.config(state="disabled")
 
     def _toggle_password_visibility(self, entry):
         if entry.cget("show") == "*":
@@ -394,6 +491,7 @@ class BackupGUI:
         selected = self.tree.focus()
         if selected:
             self.al_seleccionar_arbol(None)
+            self.habilitar_campos()  # Habilita los campos para edición
             messagebox.showinfo(
                 "Edición",
                 "Puedes modificar los campos y presionar Guardar para actualizar el dispositivo.",
