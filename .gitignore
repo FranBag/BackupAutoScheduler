@@ -3,3 +3,4 @@
 /src/controllers/__pycache__
 __pycache__/
 *.pyc
+/src/view/GUItest.py

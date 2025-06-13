@@ -45,7 +45,7 @@ def ssh_ejecutar_comando(host, usuario, contrasena, puerto, comando):
         cliente.close()
         
 
-def verificar_conexion_ssh(host, usuario, contrasena, puerto=22):
+def verificar_conexion_ssh(host, usuario, contrasena, puerto=22): # ANDA GOD1
     """
     Verifica si una conexión SSH puede establecerse correctamente.
     
@@ -63,7 +63,7 @@ def verificar_conexion_ssh(host, usuario, contrasena, puerto=22):
     cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     try:
-        
+        cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=5)
         return True, "Conexión SSH exitosa."
     except paramiko.AuthenticationException:
         return False, "Error: Falló la autenticación. Verifica usuario y contraseña."
@@ -144,15 +144,7 @@ def listado_archivos_con_detalles_ssh(host, usuario, contrasena, puerto):
 def descargar_backup_mas_reciente(host, usuario, contrasena, puerto, ruta_local, puerto_ftp=21):
     """
     Busca el archivo .backup más reciente en el Mikrotik y lo descarga vía FTP.
-    
-    Args:
-        host (str): IP o hostname del Mikrotik.
-        usuario (str): Usuario para SSH y FTP.
-        contrasena (str): Contraseña.
-        ruta_local (str): Ruta donde guardar el archivo descargado.
-        puerto_ftp (int): Puerto FTP (por defecto 21).
     """
-    # 1. Conectarse por SSH para obtener detalles
     cliente = paramiko.SSHClient()
     cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -161,23 +153,29 @@ def descargar_backup_mas_reciente(host, usuario, contrasena, puerto, ruta_local,
         _, stdout, _ = cliente.exec_command('/file print detail')
         salida = stdout.read().decode()
 
-        # 2. Parsear archivos .backup
-        patron = r'name="(.+?\.backup)".*?creation-time=(\S+ \S+)'
+        # Dividir la salida en bloques de archivos
+        bloques = salida.strip().split("\n\n")
         backups = []
 
-        for match in re.finditer(patron, salida):
-            nombre, fecha = match.groups()
-            try:
-                fecha_dt = datetime.strptime(fecha, "%b/%d/%Y %H:%M:%S")
-                backups.append((nombre, fecha_dt))
-            except ValueError:
-                continue  # Ignorar fechas que no se pueden parsear
+        for bloque in bloques:
+            nombre_match = re.search(r'name="(.+?\.backup)"', bloque)
+            fecha_match = re.search(r'creation-time=(\w+/\d+/\d+\s+\d+:\d+:\d+)', bloque)
+
+            if nombre_match and fecha_match:
+                nombre = nombre_match.group(1)
+                fecha_str = fecha_match.group(1)
+
+                try:
+                    fecha_dt = datetime.strptime(fecha_str, "%b/%d/%Y %H:%M:%S")
+                    backups.append((nombre, fecha_dt))
+                except ValueError:
+                    continue
 
         if not backups:
             print("❌ No se encontraron archivos .backup.")
             return
 
-        # 3. Seleccionar el backup más reciente
+        # Ordenar por fecha descendente
         backups.sort(key=lambda x: x[1], reverse=True)
         nombre_backup = backups[0][0]
         print(f"📦 Backup más reciente: {nombre_backup}")
@@ -188,7 +186,7 @@ def descargar_backup_mas_reciente(host, usuario, contrasena, puerto, ruta_local,
     finally:
         cliente.close()
 
-    # 4. Descargar el archivo por FTP
+    # Descargar por FTP
     try:
         with FTP() as ftp:
             ftp.connect(host, puerto_ftp)
@@ -200,7 +198,8 @@ def descargar_backup_mas_reciente(host, usuario, contrasena, puerto, ruta_local,
         print(f"✅ Backup '{nombre_backup}' descargado como '{ruta_local}'.")
 
     except Exception as e:
-        print(f"❌ Error FTP al descargar el archivo: {e}")
+        print(f"❌ Error FTP al descargar el archivo: {e}")
+
 
 def genera_y_descarga_backup(host, usuario, contrasena, puerto, ruta_local, puerto_ftp=21):
     genera_backup(host, usuario, contrasena, puerto)
@@ -342,3 +341,9 @@ def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
     
     if not verificar_fecha_router(host, usuario, contrasena, puerto):
         return Exception("error en la hora y fecha")
+    
+if __name__ == "__main__":
+    print(verificar_conexion_ssh(host="192.168.56.120", usuario="usuario", contrasena= "pass"))
+    
+    
+    genera_y_descarga_backup(host="192.168.56.120", usuario="usuario", contrasena= "pass", puerto=22,ruta_local="E:/Francisco/Ing. en Sistemas de la Información/3.Tercer año/Primer cuatri/Comunicaciones/Integrador/codigo/src/controllers/hola.backup")
