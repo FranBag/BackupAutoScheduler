@@ -1,3 +1,5 @@
+import os
+import sys
 import paramiko
 from ftplib import FTP
 import re
@@ -6,6 +8,38 @@ from datetime import datetime, timedelta
 #comando para que el router tome automaticamente fecha y hora
 #/system ntp client set enabled=yes primary-ntp=8.8.8.8 secondary-ntp=8.8.4.4
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+def verificar_conexion_ssh(host, usuario, contrasena, puerto=22):
+    """
+    Verifica si una conexión SSH puede establecerse correctamente.
+    
+    Args:
+        host (str): Dirección del servidor.
+        usuario (str): Nombre de usuario.
+        contrasena (str): Contraseña del usuario.
+        puerto (int): Puerto SSH (por defecto 22).
+
+    Returns:
+        tuple: (bool: True si la conexión es exitosa, False en caso contrario,
+                str: Mensaje de resultado.)
+    """
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=5)
+        return True, "Conexión SSH exitosa."
+    except paramiko.AuthenticationException:
+        return False, "Error de autenticación: Verifica el usuario y la contraseña."
+    except paramiko.SSHException as e:
+        return False, f"Error SSH: {e}. Asegúrate de que el puerto SSH es correcto y el servicio SSH está activo."
+    except TimeoutError:
+        return False, "Tiempo de espera agotado: No se pudo conectar al host. Verifica la IP y la conectividad de red."
+    except Exception as e:
+        return False, f"Error inesperado al intentar conectar: {e}"
+    finally:
+        cliente.close()
 
 def ssh_ejecutar_comando(host, usuario, contrasena, puerto, comando):
     """
@@ -45,34 +79,6 @@ def ssh_ejecutar_comando(host, usuario, contrasena, puerto, comando):
         cliente.close()
         
 
-def verificar_conexion_ssh(host, usuario, contrasena, puerto=22): # ANDA GOD1
-    """
-    Verifica si una conexión SSH puede establecerse correctamente.
-    
-    Args:
-        host (str): Dirección del servidor.
-        usuario (str): Nombre de usuario.
-        contrasena (str): Contraseña del usuario.
-        puerto (int): Puerto SSH (por defecto 22).
-
-    Returns:
-        bool: True si la conexión es exitosa, False en caso contrario.
-        str: Mensaje de resultado.
-    """
-    cliente = paramiko.SSHClient()
-    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    try:
-        cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=5)
-        return True, "Conexión SSH exitosa."
-    except paramiko.AuthenticationException:
-        return False, "Error: Falló la autenticación. Verifica usuario y contraseña."
-    except paramiko.SSHException as e:
-        return False, f"Error SSH: {e}"
-    except Exception as e:
-        return False, f"Error inesperado: {e}"
-    finally:
-        cliente.close()
     
 def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
     """
@@ -346,4 +352,4 @@ if __name__ == "__main__":
     print(verificar_conexion_ssh(host="192.168.56.120", usuario="usuario", contrasena= "pass"))
     
     
-    genera_y_descarga_backup(host="192.168.56.120", usuario="usuario", contrasena= "pass", puerto=22,ruta_local="E:/Francisco/Ing. en Sistemas de la Información/3.Tercer año/Primer cuatri/Comunicaciones/Integrador/codigo/src/controllers/hola.backup")
+    # genera_y_descarga_backup(host="192.168.56.120", usuario="usuario", contrasena= "pass", puerto=22,ruta_local="E:/Francisco/Ing. en Sistemas de la Información/3.Tercer año/Primer cuatri/Comunicaciones/Integrador/codigo/src/controllers/hola.backup")

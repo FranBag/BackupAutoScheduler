@@ -6,7 +6,7 @@ import datetime
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from controllers import deviceController, backupController
+from controllers import deviceController, backupController, conexion
 
 
 class BackupGUI:
@@ -224,7 +224,6 @@ class BackupGUI:
                 self._load_device_backups_into_treeview(self.backup_tree, self.selected_device_id, self.selected_device_name)
             else:
                 messagebox.showerror("Error", "No se pudo eliminar el backup de la base de datos.")
-
 
 
     def construir_lista_dispositivos(self):
@@ -499,7 +498,11 @@ class BackupGUI:
         ).grid(row=0, column=1, padx=10)
 
         tk.Button(
-            frame, text="Probar Conexión SSH", width=20, font=self.font_boton
+            frame,
+            text="Probar Conexión SSH",
+            width=20,
+            font=self.font_boton,
+            command=self.probar_conexion_ssh
         ).grid(row=0, column=2, padx=10)
 
     def limpiar_formulario(self):
@@ -691,6 +694,32 @@ class BackupGUI:
                     device["Periodicidad"],
                 ),
             )
+
+    def probar_conexion_ssh(self):
+        if self.selected_device_id is None:
+            messagebox.showwarning("Probar Conexión", "Por favor, selecciona un dispositivo de la lista para probar la conexión SSH.")
+            return
+
+        device_data = deviceController.get_device_by_id(self.selected_device_id)
+
+        if device_data:
+            host = device_data["IP"]
+            usuario = device_data["Usuario"]
+            contrasena = device_data["Contraseña"]
+            try:
+                puerto = int(device_data["Puerto SSH"])
+            except ValueError:
+                messagebox.showerror("Error de Puerto", "El puerto SSH no es un número válido.")
+                return
+
+            success, message = conexion.verificar_conexion_ssh(host, usuario, contrasena, puerto)
+
+            if success:
+                messagebox.showinfo("Conexión SSH", f"Éxito: {message}")
+            else:
+                messagebox.showerror("Conexión SSH", f"Fallo: {message}")
+        else:
+            messagebox.showerror("Error", "No se pudieron obtener los detalles del dispositivo seleccionado.")
 
 
 if __name__ == "__main__":
