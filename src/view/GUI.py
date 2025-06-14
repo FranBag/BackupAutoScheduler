@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox, font
 import os
 import sys
 import datetime
-
+import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from controllers import deviceController, backupController, conexion
@@ -182,22 +182,54 @@ class BackupGUI:
             messagebox.showwarning("Error", "No hay dispositivo seleccionado para realizar backup.")
             return
 
-        # Generar fecha/hora actual
+        device_data = deviceController.get_device_by_id(self.selected_device_id)
+        if not device_data:
+            messagebox.showerror("Error", "No se pudieron obtener los datos del dispositivo seleccionado.")
+            return
+
+        host = device_data["IP"]
+        usuario = device_data["Usuario"]
+        contrasena = device_data["Contraseña"]
+        try:
+            puerto = int(device_data["Puerto SSH"])
+        except ValueError:
+            messagebox.showerror("Error", "El puerto SSH no es un número válido.")
+            return
+
+        messagebox.showinfo("Iniciando Backup", "Intentando generar backup en el Mikrotik. Esto puede tomar unos segundos...")
+        
+        # Generar el backup en el Mikrotik
+        success_gen, msg_gen = conexion.genera_backup(host, usuario, contrasena, puerto)
+        if not success_gen:
+            messagebox.showerror("Error al Generar Backup", msg_gen)
+            return
+        
+        # Dar un pequeño tiempo para que el Mikrotik genere el archivo
+        time.sleep(2)
+
+        messagebox.showinfo("Descargando Backup", "Backup generado. Intentando descargar el archivo más reciente...")
+
+        # Descargar el contenido del backup más reciente
+        success_download, backup_content, backup_filename = conexion.obtener_y_descargar_backup_mas_reciente(
+            host, usuario, contrasena, puerto
+        )
+
+        if not success_download:
+            messagebox.showerror("Error al Descargar Backup", backup_filename)
+            return
+
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         
-        # Simular el contenido del backup como una cadena de bytes (para BLOB)
-        # En una implementación real, aquí leerías el archivo de configuración del router
-        backup_file_content = f"Config_Backup_of_{self.selected_device_name}_{current_time}.txt"
-        backup_file_data = backup_file_content.encode('utf-8') # Convertir a bytes para BLOB
+        # Almacenar el contenido del backup en la base de datos
+        success_db = backupController.add_backup(current_time, self.selected_device_id, backup_content)
 
-        success = backupController.add_backup(current_time, self.selected_device_id, backup_file_data)
-
-        if success:
-            messagebox.showinfo("Backup Realizado", f"Backup para {self.selected_device_name} guardado en la base de datos.")
+        if success_db:
+            messagebox.showinfo("Backup Realizado", f"Backup '{backup_filename}' para {self.selected_device_name} guardado en la base de datos.")
             if hasattr(self, 'backup_tree') and self.backup_tree.winfo_exists():
                 self._load_device_backups_into_treeview(self.backup_tree, self.selected_device_id, self.selected_device_name)
         else:
-            messagebox.showerror("Error", f"No se pudo realizar el backup para {self.selected_device_name}.")
+            messagebox.showerror("Error", f"No se pudo guardar el backup '{backup_filename}' en la base de datos.")
+
 
     def eliminar_backup(self):
         if self.selected_device_id is None:
