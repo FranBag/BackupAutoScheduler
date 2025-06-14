@@ -9,23 +9,18 @@ def get_backups_for_device(device_id):
         backups_raw = backupModel.getAllBackupByDevice(device_id)
         formatted_backups = []
         for backup in backups_raw:
-            # El campo backup_file es BLOB, si almacenas texto o ruta, asegúrate de decodificarlo
-            # Si es un archivo binario, aquí deberías manejarlo como tal o solo mostrar el nombre.
-            # Para la UI, asumiremos que se almacena una ruta o nombre de archivo como string.
-            # Si es un BLOB con bytes de un archivo, necesitarías guardarlo en disco para mostrarlo o abrirlo.
-            # Para este ejemplo, lo decodificamos si es bytes, o lo usamos directamente si ya es string.
-            backup_file_content = backup[2] # backup[2] es backup_file
+            backup_file_content = backup[2] 
             if isinstance(backup_file_content, bytes):
                 try:
                     backup_file_content = backup_file_content.decode('utf-8')
                 except UnicodeDecodeError:
-                    backup_file_content = "<Contenido Binario>" # O manejarlo de otra forma
+                    backup_file_content = "<Contenido Binario>" #
             
             formatted_backups.append({
-                "ID": backup[0], # ID del backup
+                "ID": backup[0], 
                 "Fecha": backup[1],
                 "Archivo": backup_file_content,
-                "DeviceID": backup[3] # Para referencia interna, aunque no se mostrará directamente
+                "DeviceID": backup[3] 
             })
         return formatted_backups
     

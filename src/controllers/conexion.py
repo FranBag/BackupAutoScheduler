@@ -80,34 +80,6 @@ def ssh_ejecutar_comando(host, usuario, contrasena, puerto, comando):
     finally:
         cliente.close()
 
-    
-# def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
-#     """
-#     Configura la fecha y hora del router MikroTik igual que la fecha/hora local de la PC.
-#     """
-#     # Obtener fecha y hora local en el formato esperado por MikroTik (MMM/DD/YYYY HH:MM:SS)
-#     ahora = datetime.now()
-#     fecha_str = ahora.strftime("%b/%d/%Y").lower()  # ej: jun/13/2025 (en minúsculas)
-#     hora_str = ahora.strftime("%H:%M:%S")          # ej: 14:35:20
-
-#     comando = f'/system clock set date={fecha_str} time={hora_str}'
-
-#     cliente = paramiko.SSHClient()
-#     cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-#     try:
-#         cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=10)
-#         stdin, stdout, stderr = cliente.exec_command(comando)
-#         error = stderr.read().decode()
-#         if error:
-#             print(f"Error al configurar fecha/hora: {error}")
-#         else:
-#             print(f"Fecha y hora configuradas a {fecha_str} {hora_str} en el router.")
-#     except Exception as e:
-#         print(f"Error de conexión o ejecución: {e}")
-#     finally:
-#         cliente.close()
-
 
 def genera_backup(host, usuario, contrasena, puerto):
     """
@@ -153,7 +125,6 @@ def listado_archivos_con_detalles_ssh(host, usuario, contrasena, puerto):
         cliente.close()
 
 
-
 def obtener_y_descargar_backup_mas_reciente(host, usuario, contrasena, puerto):
     """
     Busca el archivo .backup más reciente en el Mikrotik (basándose en el timestamp en el nombre)
@@ -170,17 +141,17 @@ def obtener_y_descargar_backup_mas_reciente(host, usuario, contrasena, puerto):
 
     try:
         cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=10)
-        
-        # Obtener lista de archivos en el Mikrotik
+
         # Usamos /file print detail para obtener los nombres de archivo y sus propiedades
         _stdin, stdout, _stderr = cliente.exec_command('/file print detail')
         salida_files = stdout.read().decode()
 
         backups = []
+        
         # Expresión regular para capturar el nombre del archivo '.backup'
-        # Ejemplo de línea: ' 0 name="MikroTik-20250614-1652.backup" type="backup" size=26.1KiB'
         patron_nombre_backup = re.compile(r'name="([^"]+\.backup)"')
-        # Expresión regular para extraer la fecha/hora de un nombre de archivo como 'MikroTik-YYYYMMDD-HHMM.backup'
+        
+        # Expresión regular para extraer la fecha/hora de un nombre de archivo
         patron_fecha_en_nombre = re.compile(r'(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})')
 
         for linea in salida_files.splitlines():
@@ -196,14 +167,10 @@ def obtener_y_descargar_backup_mas_reciente(host, usuario, contrasena, puerto):
                         año, mes, dia, hora, minuto = map(int, fecha_en_nombre_match.groups())
                         fecha_dt = datetime(año, mes, dia, hora, minuto)
                     except ValueError:
-                        # Si hay un error al parsear la fecha, ignorar y fecha_dt seguirá siendo None
                         pass
                 
-                if fecha_dt: # Solo añadir a la lista si pudimos extraer una fecha válida para ordenar
+                if fecha_dt: 
                     backups.append((nombre_archivo_completo, fecha_dt))
-                # else:
-                #     # Opcional: imprimir una advertencia si no se pudo extraer la fecha de un backup
-                #     print(f"Advertencia: No se pudo extraer una fecha válida del nombre de backup '{nombre_archivo_completo}'. No se considerará para 'el más reciente'.")
 
         if not backups:
             return False, None, "No se encontraron archivos .backup con un formato de fecha reconocido en el nombre."
@@ -236,93 +203,120 @@ def obtener_y_descargar_backup_mas_reciente(host, usuario, contrasena, puerto):
         
 
 
+# Funciones no utilizadas
 
-# def verificar_fecha_router(host, usuario, contrasena, max_diferencia_dias=1):
-#     """
-#     Verifica que la fecha/hora del router Mikrotik no difiera más de max_diferencia_dias de la fecha local.
+def verificar_fecha_router(host, usuario, contrasena, max_diferencia_dias=1):
+    """
+    Verifica que la fecha/hora del router Mikrotik no difiera más de max_diferencia_dias de la fecha local.
     
-#     Args:
-#         host (str): IP o hostname del Mikrotik.
-#         usuario (str): Usuario SSH.
-#         contrasena (str): Contraseña.
-#         max_diferencia_dias (int): Días máximo de diferencia permitida (default 1).
+    Args:
+        host (str): IP o hostname del Mikrotik.
+        usuario (str): Usuario SSH.
+        contrasena (str): Contraseña.
+        max_diferencia_dias (int): Días máximo de diferencia permitida (default 1).
         
-#     Returns:
-#         bool, str: (True, mensaje) si está OK, (False, mensaje_error) si hay demasiada diferencia.
-#     """
-#     cliente = paramiko.SSHClient()
-#     cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    Returns:
+        bool, str: (True, mensaje) si está OK, (False, mensaje_error) si hay demasiada diferencia.
+    """
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-#     try:
-#         cliente.connect(hostname=host, username=usuario, password=contrasena, timeout=10)
-#         _, stdout, _ = cliente.exec_command('/system clock print')
-#         salida = stdout.read().decode()
+    try:
+        cliente.connect(hostname=host, username=usuario, password=contrasena, timeout=10)
+        _, stdout, _ = cliente.exec_command('/system clock print')
+        salida = stdout.read().decode()
 
-#         # Salida típica:
-#         # time: 14:23:10
-#         # date: jun/13/2025
+        # Salida típica:
+        # time: 14:23:10
+        # date: jun/13/2025
 
-#         # Extraer time y date usando regex
-#         time_match = re.search(r'time:\s*(\d{2}:\d{2}:\d{2})', salida)
-#         date_match = re.search(r'date:\s*([a-z]{3}/\d{1,2}/\d{4})', salida, re.IGNORECASE)
+        # Extraer time y date usando regex
+        time_match = re.search(r'time:\s*(\d{2}:\d{2}:\d{2})', salida)
+        date_match = re.search(r'date:\s*([a-z]{3}/\d{1,2}/\d{4})', salida, re.IGNORECASE)
 
-#         if not time_match or not date_match:
-#             return False, "No se pudo extraer fecha/hora del router."
+        if not time_match or not date_match:
+            return False, "No se pudo extraer fecha/hora del router."
 
-#         hora_str = time_match.group(1)
-#         fecha_str = date_match.group(1).lower()
+        hora_str = time_match.group(1)
+        fecha_str = date_match.group(1).lower()
 
-#         # Parsear fecha y hora Mikrotik
-#         fecha_hora_str = f"{fecha_str} {hora_str}"  # ej: jun/13/2025 14:23:10
-#         fecha_hora = datetime.strptime(fecha_hora_str, "%b/%d/%Y %H:%M:%S")
+        # Parsear fecha y hora Mikrotik
+        fecha_hora_str = f"{fecha_str} {hora_str}"  # ej: jun/13/2025 14:23:10
+        fecha_hora = datetime.strptime(fecha_hora_str, "%b/%d/%Y %H:%M:%S")
 
-#         # Obtener fecha/hora local
-#         ahora_local = datetime.now()
+        # Obtener fecha/hora local
+        ahora_local = datetime.now()
 
-#         diferencia = abs(ahora_local - fecha_hora)
+        diferencia = abs(ahora_local - fecha_hora)
 
-#         if diferencia > timedelta(days=max_diferencia_dias):
-#             return False, f"Diferencia de fecha/hora demasiado grande: {diferencia}."
+        if diferencia > timedelta(days=max_diferencia_dias):
+            return False, f"Diferencia de fecha/hora demasiado grande: {diferencia}."
 
-#         return True, "Fecha/hora del router está dentro del rango aceptable."
+        return True, "Fecha/hora del router está dentro del rango aceptable."
 
-#     except Exception as e:
-#         return False, f"Error al verificar fecha/hora: {e}"
-#     finally:
-#         cliente.close()
+    except Exception as e:
+        return False, f"Error al verificar fecha/hora: {e}"
+    finally:
+        cliente.close()
         
-# def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
-#     """
-#     Configura la fecha y hora del router MikroTik igual que la fecha/hora local de la PC.
-#     """
-#     # Obtener fecha y hora local en el formato esperado por MikroTik (MMM/DD/YYYY HH:MM:SS)
-#     ahora = datetime.now()
-#     fecha_str = ahora.strftime("%b/%d/%Y").lower()  # ej: jun/13/2025 (en minúsculas)
-#     hora_str = ahora.strftime("%H:%M:%S")          # ej: 14:35:20
+def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
+    """
+    Configura la fecha y hora del router MikroTik igual que la fecha/hora local de la PC.
+    """
+    # Obtener fecha y hora local en el formato esperado por MikroTik (MMM/DD/YYYY HH:MM:SS)
+    ahora = datetime.now()
+    fecha_str = ahora.strftime("%b/%d/%Y").lower()  # ej: jun/13/2025 (en minúsculas)
+    hora_str = ahora.strftime("%H:%M:%S")          # ej: 14:35:20
 
-#     comando = f'/system clock set date={fecha_str} time={hora_str}'
+    comando = f'/system clock set date={fecha_str} time={hora_str}'
 
-#     cliente = paramiko.SSHClient()
-#     cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-#     try:
-#         cliente.connect(hostname=host,port=puerto, username=usuario, password=contrasena, timeout=10)
-#         stdin, stdout, stderr = cliente.exec_command(comando)
-#         error = stderr.read().decode()
-#         if error:
-#             print(f"Error al configurar fecha/hora: {error}")
-#         else:
-#             print(f"Fecha y hora configuradas a {fecha_str} {hora_str} en el router.")
-#     except Exception as e:
-#         print(f"Error de conexión o ejecución: {e}")
-#     finally:
-#         cliente.close()
+    try:
+        cliente.connect(hostname=host,port=puerto, username=usuario, password=contrasena, timeout=10)
+        stdin, stdout, stderr = cliente.exec_command(comando)
+        error = stderr.read().decode()
+        if error:
+            print(f"Error al configurar fecha/hora: {error}")
+        else:
+            print(f"Fecha y hora configuradas a {fecha_str} {hora_str} en el router.")
+    except Exception as e:
+        print(f"Error de conexión o ejecución: {e}")
+    finally:
+        cliente.close()
     
-#     if not verificar_fecha_router(host, usuario, contrasena, puerto):
-#         return Exception("error en la hora y fecha")
+    if not verificar_fecha_router(host, usuario, contrasena, puerto):
+        return Exception("error en la hora y fecha")
     
+def sincronizar_fecha_hora_router(host, usuario, contrasena, puerto):
+    """
+    Configura la fecha y hora del router MikroTik igual que la fecha/hora local de la PC.
+    """
+    # Obtener fecha y hora local en el formato esperado por MikroTik (MMM/DD/YYYY HH:MM:SS)
+    ahora = datetime.now()
+    fecha_str = ahora.strftime("%b/%d/%Y").lower()  # ej: jun/13/2025 (en minúsculas)
+    hora_str = ahora.strftime("%H:%M:%S")          # ej: 14:35:20
+
+    comando = f'/system clock set date={fecha_str} time={hora_str}'
+
+    cliente = paramiko.SSHClient()
+    cliente.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        cliente.connect(hostname=host, port=puerto, username=usuario, password=contrasena, timeout=10)
+        stdin, stdout, stderr = cliente.exec_command(comando)
+        error = stderr.read().decode()
+        if error:
+            print(f"Error al configurar fecha/hora: {error}")
+        else:
+            print(f"Fecha y hora configuradas a {fecha_str} {hora_str} en el router.")
+    except Exception as e:
+        print(f"Error de conexión o ejecución: {e}")
+    finally:
+        cliente.close()
+
 if __name__ == "__main__":
     print(verificar_conexion_ssh(host="192.168.56.120", usuario="usuario", contrasena= "pass"))
     
     
-    # genera_y_descarga_backup(host="192.168.56.120", usuario="usuario", contrasena= "pass", puerto=22,ruta_local="E:/Francisco/Ing. en Sistemas de la Información/3.Tercer año/Primer cuatri/Comunicaciones/Integrador/codigo/src/controllers/hola.backup")

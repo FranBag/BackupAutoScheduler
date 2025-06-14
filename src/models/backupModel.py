@@ -61,15 +61,3 @@ def iniciarbackup():
 
 if __name__ == "__main__":
     pass
-    # with open("test_media/Mina.webp", "rb") as backup_file:
-    #     backup_file_binary = backup_file.read()
-    
-
-    
-    # getBackupByDevice(1, "15-05-2025")
-    
-    
-    
-    # foto = getAllBackupByDevice(2)[0][2]
-    # with open("test_media/recuperado.webp", 'wb') as recuperado:
-    #     recuperado.write(foto)

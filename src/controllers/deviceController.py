@@ -85,27 +85,3 @@ def get_device_by_id(device_id):
             "Hora": device_data[7]
         }
     return None
-
-# def obtener_dispositivos():
-#     dispositivos = []
-
-#     try:
-#         rows = deviceModel.getAllDevices()
-#         for row in rows:
-#             dispositivo = {
-#                 "Nombre": row[0],
-#                 "IP": row[1],
-#                 "Usuario": row[2],
-#                 "Contraseña": row[3],
-#                 "Puerto SSH": row[4],
-#                 "Hora": row[5],
-#                 "Periodicidad": row[6],
-#             }
-#             dispositivos.append(dispositivo)
-#         return dispositivos
-
-#     except sqlite.Error as e:
-#         print("Error al acceder a la base de datos:", e)
-#         return []
-    
-# print(obtener_dispositivos())
