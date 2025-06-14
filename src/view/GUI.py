@@ -6,7 +6,7 @@ import datetime
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from controllers import deviceController
+from controllers import deviceController, backupController
 
 
 class BackupGUI:
@@ -26,6 +26,7 @@ class BackupGUI:
 
         self.fields = self.inicializar_campos()
         self.selected_device_id = None
+        self.selected_device_name = None 
 
         self.entry_widgets = {}
         self.construir_widgets()
@@ -39,7 +40,7 @@ class BackupGUI:
             "Contraseña": tk.StringVar(),
             "Puerto SSH": tk.StringVar(),
             "Hora": tk.StringVar(),
-            "Periodicidad": tk.StringVar(),  # NUEVO: quité los valores con los que se inicializaban
+            "Periodicidad": tk.StringVar(),
         }
 
     def construir_widgets(self):
@@ -88,21 +89,21 @@ class BackupGUI:
             command=self.abrir_ventana_backups,
         ).grid(row=0, column=3, padx=5)
 
-    """
-    ////////////////////////////////////////////////////
-    ///////////////    FRAN HACE ESTO    ///////////////
-    ////////////////////////////////////////////////////
-    """
 
     def abrir_ventana_backups(self):
+        if self.selected_device_id is None:
+            messagebox.showwarning("Seleccionar Dispositivo", "Por favor, selecciona un dispositivo para gestionar sus backups.")
+            return
+
         ventana = tk.Toplevel(self.master)
-        ventana.title("Historial de Backups")
-        ventana.geometry("600x400")
+        ventana.title(f"Historial de Backups para: {self.selected_device_name}")
+        ventana.geometry("700x450")
         ventana.configure(bg="#404040")
         ventana.resizable(False, False)
+
         tk.Label(
             ventana,
-            text="Lista de Backups Realizados",
+            text=f"Backups de {self.selected_device_name}",
             bg="#404040",
             fg="white",
             font=self.font_titulo,
@@ -116,8 +117,9 @@ class BackupGUI:
         scrollbar_x = ttk.Scrollbar(frame_tabla, orient="horizontal")
         scrollbar_x.pack(side="bottom", fill="x")
 
-        columnas = ("Fecha", "Dispositivo", "Estado", "Ruta")
-        tree = ttk.Treeview(
+        # El ID no se muestra, pero se almacena en el iid para eliminación
+        columnas = ("Fecha", "Archivo de Backup", "Dispositivo")   # PROBABLEMENTE QUITAR ARCHIVO BACKUP
+        self.backup_tree = ttk.Treeview( 
             frame_tabla,
             columns=columnas,
             show="headings",
@@ -126,26 +128,104 @@ class BackupGUI:
             height=10,
         )
         for col in columnas:
-            tree.heading(col, text=col)
-            tree.column(col, width=140)
+            self.backup_tree.heading(col, text=col)
+            self.backup_tree.column(col, width=200)
 
-        tree.pack(fill="both", expand=True)
-        scrollbar_y.config(command=tree.yview)
-        scrollbar_x.config(command=tree.xview)
+        self.backup_tree.pack(fill="both", expand=True)
+        scrollbar_y.config(command=self.backup_tree.yview)
+        scrollbar_x.config(command=self.backup_tree.xview)
 
-        backups_simulados = [
-            ("2025-06-10 08:00", "Router Central", "Éxito", "/backups/router1.bak"),
-            ("2025-06-11 12:00", "Switch Piso3", "Error", "—"),
-            ("2025-06-12 08:00", "Router Central", "Éxito", "/backups/router1.bak"),
-        ]
-        for backup in backups_simulados:
-            tree.insert("", "end", values=backup)
+        # Cargar los backups reales del dispositivo seleccionado
+        self._load_device_backups_into_treeview(self.backup_tree, self.selected_device_id, self.selected_device_name)
 
-    """
-    ////////////////////////////////////////////////////
-    ///////////////    FRAN HACE ESTO    ///////////////
-    ////////////////////////////////////////////////////
-    """
+        # Frame para botones de la ventana de backups
+        button_frame_backup = tk.Frame(ventana, pady=10, bg="#404040")
+        button_frame_backup.pack()
+
+        tk.Button(
+            button_frame_backup,
+            text="Realizar Backup",
+            width=15,
+            command=self.realizar_backup, 
+            bg="#008000",
+            fg="white",
+            font=self.font_boton,
+        ).grid(row=0, column=0, padx=10)
+
+        tk.Button(
+            button_frame_backup,
+            text="Eliminar Backup",
+            width=15,
+            command=self.eliminar_backup, 
+            bg="red",
+            fg="white",
+            font=self.font_boton,
+        ).grid(row=0, column=1, padx=10)
+
+    def _load_device_backups_into_treeview(self, treeview_widget, device_id, device_name):
+        for item in treeview_widget.get_children():
+            treeview_widget.delete(item)
+
+        # Obtener los backups reales para este device_id desde el controlador
+        backups = backupController.get_backups_for_device(device_id)
+
+        for backup in backups:
+            treeview_widget.insert(
+                "",
+                "end",
+                iid=backup["ID"], # Usamos el ID del backup como iid para futuras operaciones
+                values=(backup["Fecha"], backup["Archivo"], device_name)
+            )
+
+    def realizar_backup(self):
+        if self.selected_device_id is None:
+            messagebox.showwarning("Error", "No hay dispositivo seleccionado para realizar backup.")
+            return
+
+        # Generar fecha/hora actual
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        
+        # Simular el contenido del backup como una cadena de bytes (para BLOB)
+        # En una implementación real, aquí leerías el archivo de configuración del router
+        backup_file_content = f"Config_Backup_of_{self.selected_device_name}_{current_time}.txt"
+        backup_file_data = backup_file_content.encode('utf-8') # Convertir a bytes para BLOB
+
+        success = backupController.add_backup(current_time, self.selected_device_id, backup_file_data)
+
+        if success:
+            messagebox.showinfo("Backup Realizado", f"Backup para {self.selected_device_name} guardado en la base de datos.")
+            if hasattr(self, 'backup_tree') and self.backup_tree.winfo_exists():
+                self._load_device_backups_into_treeview(self.backup_tree, self.selected_device_id, self.selected_device_name)
+        else:
+            messagebox.showerror("Error", f"No se pudo realizar el backup para {self.selected_device_name}.")
+
+    def eliminar_backup(self):
+        if self.selected_device_id is None:
+            messagebox.showwarning("Error", "No hay dispositivo seleccionado.")
+            return
+
+        selected_backup_item = self.backup_tree.focus()
+        if not selected_backup_item:
+            messagebox.showwarning("Seleccionar Backup", "Por favor, selecciona un backup para eliminar.")
+            return
+
+        # selected_backup_item ya es el iid (identificador interno del item), que es el ID del backup
+        backup_id_to_delete = selected_backup_item
+        
+        confirm = messagebox.askyesno(
+            "Confirmar Eliminación", "¿Estás seguro de que deseas eliminar este backup?"
+        )
+
+        if confirm:
+            success = backupController.delete_backup(backup_id_to_delete)
+
+            if success:
+                messagebox.showinfo("Backup Eliminado", "Backup eliminado correctamente de la base de datos.")
+                self._load_device_backups_into_treeview(self.backup_tree, self.selected_device_id, self.selected_device_name)
+            else:
+                messagebox.showerror("Error", "No se pudo eliminar el backup de la base de datos.")
+
+
 
     def construir_lista_dispositivos(self):
 
@@ -206,7 +286,7 @@ class BackupGUI:
         scrollbar_y.config(command=self.tree.yview)
         scrollbar_x.config(command=self.tree.xview)
         self.tree.bind("<<TreeviewSelect>>", self.al_seleccionar_arbol)
-        self.actualizar_vista_arbol()
+        self.actualizar_vista_arbol() # SOSPECHOSO
 
         self.tree_menu = tk.Menu(self.master, tearoff=0)
         self.tree_menu.add_command(
@@ -224,14 +304,17 @@ class BackupGUI:
         self.tree.bind("<Button-3>", self._mostrar_menu_tabla)
 
     def habilitar_nuevo_dispositivo(self):
+        self.selected_device_id = None
         self.limpiar_formulario()
         self.habilitar_campos()
-        for entry in self.entry_widgets.values():
-            entry.config(state="normal")
+        # for entry in self.entry_widgets.values():
+        #     entry.config(state="normal")
+        self.tree.unbind("<<TreeviewSelect>>")
         messagebox.showinfo(
             "Nuevo dispositivo", "Puedes ingresar los detalles de un nuevo dispositivo."
         )
-
+        self.tree.bind("<<TreeviewSelect>>", self.al_seleccionar_arbol)
+        
     def _mostrar_menu_tabla(self, event):
         row_id = self.tree.identify_row(event.y)
         if row_id:
@@ -347,9 +430,12 @@ class BackupGUI:
 
     def habilitar_campos(
         self,
-    ):  # Habilita todos los campos de entrada y botones relacionados.
+    ):
         for entry in self.entry_widgets.values():
-            entry.config(state="normal")
+            if isinstance(entry, ttk.Combobox):
+                entry.config(state="readonly")
+            else:
+                entry.config(state="normal")
         if "__toggle_button" in self.entry_widgets:
             self.entry_widgets["__toggle_button"].config(state="normal")
         if hasattr(self, "limpiar_btn"):
@@ -357,7 +443,7 @@ class BackupGUI:
 
     def bloquear_campos(
         self,
-    ):  # Deshabilita todos los campos de entrada y botones relacionados.
+    ):
         for entry in self.entry_widgets.values():
             entry.config(state="disabled")
         if "__toggle_button" in self.entry_widgets:
@@ -422,10 +508,16 @@ class BackupGUI:
         self.fields["Hora"].set("HH:mm")
         self.fields["Periodicidad"].set("Diaria")  # NUEVO
         self.selected_id = None
+        self.selected_device_name = None
         self.tree.selection_set(())
         if "Nombre" in self.entry_widgets:
             self.entry_widgets["Nombre"].focus_set()
-
+            
+        if "Contraseña" in self.entry_widgets:
+            self.entry_widgets["Contraseña"].config(show="*")
+            if "__toggle_button" in self.entry_widgets:
+                self.entry_widgets["__toggle_button"].config(text="Mostrar")
+        self.bloquear_campos()
         # POSIBLE MEJORA(se agrega, no reemplaza nada)
         # for label_text, entry_widget in self.entry_widgets.items():
         #     if label_text == "Contraseña":
@@ -441,18 +533,19 @@ class BackupGUI:
             device_id = self.tree.item(selected_item, "tags")[0]
             self.selected_device_id = device_id
 
+            device_values = self.tree.item(selected_item, 'values')
+            self.selected_device_name = device_values[0] if device_values else "Dispositivo Desconocido"
+            
             device_data = deviceController.get_device_by_id(device_id)
             if device_data:
                 for key, var in self.fields.items():
                     var.set(device_data.get(key, ""))
 
-            # POSIBLE MEJORA(se agrega)
-            # if "Contraseña" in self.entry_widgets:
-            #     self.entry_widgets["Contraseña"].config(show="*")
-            #     for widget in self.entry_widgets["Contraseña"].master.winfo_children():
-            #         if isinstance(widget, tk.Button) and widget.grid_info().get("row") == self.entry_widgets["Contraseña"].grid_info().get("row") and widget.grid_info().get("column") == 2:
-            #             widget.config(text="Mostrar")
-            #             break
+            if "Contraseña" in self.entry_widgets:
+                self.entry_widgets["Contraseña"].config(show="*")
+                if "__toggle_button" in self.entry_widgets:
+                    self.entry_widgets["__toggle_button"].config(text="Mostrar")
+            self.bloquear_campos()
         else:
             self.limpiar_formulario()
 
