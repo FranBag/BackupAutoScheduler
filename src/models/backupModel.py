@@ -47,8 +47,17 @@ def deleteBackupById(backup_id):
     connection.close()
 
 def iniciarbackup():
-    storeBackup("20-06-2024", 2, "BACKUP1")
-    storeBackup("15-05-2025", 1, "BACKUP2")
+    storeBackup("2024-06-20", 2, "BACKUP1")
+    storeBackup("2025-05-15", 1, "BACKUP2")
+    storeBackup("2024-10-28", 3, "BACKUP3")
+    storeBackup("2025-04-11", 2, "BACKUP4")
+    storeBackup("1992-05-09", 2, "BACKUP5")
+    storeBackup("2025-03-22", 1, "BACKUP6")
+    storeBackup("2024-02-16", 5, "BACKUP7")
+    storeBackup("2023-11-13", 4, "BACKUP8")
+    storeBackup("2022-10-15", 4, "BACKUP8")
+    storeBackup("2025-02-17", 5, "BACKUP9")
+
 
 if __name__ == "__main__":
     pass
