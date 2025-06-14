@@ -9,8 +9,7 @@ Desarrollar una aplicacion que permita la gestion automatica de respaldos de con
 ---
 
 ## **Datos del Grupo**  
-| **Materia**  | Comunicaciones                           |
-|              | Ingeniería de Software II                | 
+| **Materias** | Comunicaciones Ingeniería de Software II | 
 |--------------|------------------------------------------|  
 | **Profesor** | Kutz René Gabriel                        |  
 |              | Baez Sebastian Esteban                   |  
